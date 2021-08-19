@@ -40,7 +40,10 @@ impl<'a> std::io::Read for Reader<'a> {
         let mut f = self.file.write().map_err(|_e| Error::new(ErrorKind::Other, "Write lock failed"))?;
 
         f.seek(SeekFrom::Start(self.offset + self.position))?;
-        let bytes_read = f.read(buffer)?;
+
+        let maxread = buffer.len().min((self.length - self.position) as usize);
+
+        let bytes_read = f.read(&mut buffer[0..maxread])?;
         self.position += bytes_read as u64;
 
         Ok(bytes_read)
