@@ -3,7 +3,7 @@ use std::io::Error;
 use std::io::ErrorKind;
 use std::io::Seek;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Reader<'a> {
     file: &'a std::sync::RwLock<std::fs::File>,
     offset: u64,
@@ -56,7 +56,7 @@ impl<'a> std::io::Seek for Reader<'a> {
                 } else {
                     let offset = (-offset) as u64;
                     if offset < self.length {
-                        self.position = self.length + offset;
+                        self.position = self.length - offset;
                         Ok(self.position)
                     } else {
                         Err(Error::new(ErrorKind::Other, "Can't seek before start of file"))
@@ -65,7 +65,7 @@ impl<'a> std::io::Seek for Reader<'a> {
             },
             SeekFrom::Start(offset) => {
                 if offset < self.length {
-                    self.position = self.length + offset;
+                    self.position = offset;
                     Ok(self.position)
                 } else {
                     Err(Error::new(ErrorKind::Other, "Can't seek past end of file"))
