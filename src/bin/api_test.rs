@@ -1,4 +1,5 @@
 use vgc_data::*;
+use vgc_data::read::VirtualFile;
 
 fn walkdir(mut entries: romfs::NodeIterator, depth: usize) -> Result<(), std::io::Error> {
     let indent = "  ".repeat(depth);
@@ -19,9 +20,9 @@ fn walkdir(mut entries: romfs::NodeIterator, depth: usize) -> Result<(), std::io
 }
 
 pub fn main() -> Result<(), std::io::Error> {
-    let file = std::fs::File::open("pokemon-sun.3ds")?;
+    let file = read::FileHolder::open("pokemon-sun.3ds")?;
 
-    let rom = ncsd::NCSD::new(file)?;
+    let rom = ncsd::NCSD::new(file.reader())?;
     let p0 = rom.partition(ncsd::Partition::Main)?;
     let romfs = p0.romfs()?.unwrap();
 
