@@ -18,12 +18,41 @@ impl<'a> NCCH<'a> {
         Ok(NCCH { file, header })
     }
 
-    pub fn romfs(&self) -> Result<RomFS, std::io::Error> {
-        RomFS::new(self.file.limit(self.header.romfs_offset, self.header.romfs_size)?)
+    pub fn romfs(&self) -> Result<Option<RomFS>, std::io::Error> {
+        let rom = RomFS::new(self.file.limit(self.header.romfs_offset, self.header.romfs_size)?)?;
+
+        Ok(Some(rom))
     }
 
     pub fn id(&self) -> u64 {
         self.header.partition_id
+    }
+
+    // plain region not yet implemented
+    pub fn plain_region(&'a self) -> Result<Option<Reader<'a>>, std::io::Error> {
+        if self.header.plain_region_offset == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(self.file.limit(self.header.plain_region_offset, self.header.plain_region_size)?))
+        }
+    }
+
+    // exefs region not yet implemented
+    pub fn exefs(&'a self) -> Result<Option<Reader<'a>>, std::io::Error> {
+        if self.header.exefs_offset == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(self.file.limit(self.header.exefs_offset, self.header.exefs_size)?))
+        }
+    }
+
+    // logo region not yet implemented
+    pub fn logo(&'a self) -> Result<Option<Reader<'a>>, std::io::Error> {
+        if self.header.logo_region_offset == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(self.file.limit(self.header.logo_region_offset, self.header.logo_region_size)?))
+        }
     }
 }
 
