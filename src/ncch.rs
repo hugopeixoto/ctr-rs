@@ -29,7 +29,7 @@ impl<'a> NCCH<'a> {
 
 impl<'a> VirtualFile<'a> for NCCH<'a> {
     fn reader(&self) -> Reader<'a> {
-        self.file.clone()
+        self.file.at_zero()
     }
 }
 

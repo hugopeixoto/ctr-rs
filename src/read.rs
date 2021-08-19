@@ -33,6 +33,15 @@ impl<'a> Reader<'a> {
             Err(Error::new(ErrorKind::Other, "Reader limit out of bounds"))
         }
     }
+
+    pub fn at_zero(&self) -> Reader<'a> {
+        Reader {
+            file: self.file.clone(),
+            offset: self.offset,
+            length: self.length,
+            position: 0,
+        }
+    }
 }
 
 impl<'a> std::io::Read for Reader<'a> {
