@@ -96,3 +96,7 @@ impl<'a> std::io::Seek for Reader<'a> {
         }
     }
 }
+
+pub trait VirtualFile<'a> {
+    fn reader(&'a self) -> Reader<'a>;
+}

@@ -1,5 +1,6 @@
 use super::romfs::RomFS;
 use super::read::Reader;
+use super::read::VirtualFile;
 use std::io::Read;
 use byteorder::ReadBytesExt;
 use byteorder::LittleEndian;
@@ -19,6 +20,12 @@ impl<'a> NCCH<'a> {
 
     pub fn romfs(&self) -> Result<RomFS, std::io::Error> {
         RomFS::new(self.file.limit(self.header.romfs_offset, self.header.romfs_size)?)
+    }
+}
+
+impl<'a> VirtualFile<'a> for NCCH<'a> {
+    fn reader(&self) -> Reader<'a> {
+        self.file.clone()
     }
 }
 
