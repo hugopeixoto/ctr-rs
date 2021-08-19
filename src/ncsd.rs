@@ -38,14 +38,6 @@ impl NCSD {
         Ok(NCSD { file, length, header })
     }
 
-    fn partition_offset(&self, index: usize) -> u64 {
-        self.header.partition_offsets[index] as u64 * 0x200
-    }
-
-    fn partition_length(&self, index: usize) -> u64 {
-        self.header.partition_lengths[index] as u64 * 0x200
-    }
-
     pub fn partition(&self, p: Partition) -> Result<NCCH, std::io::Error> {
         match p {
             Partition::Main => self.partition(Partition::Index(0)),
@@ -58,8 +50,45 @@ impl NCSD {
                     return Err(std::io::Error::new(std::io::ErrorKind::Other, "Partition number out of bounds"));
                 }
 
-                NCCH::new(Reader::new(&self.file, self.partition_offset(index), self.partition_length(index)))
+                if self.header.partition_offset(index) == 0 {
+                    return Err(std::io::Error::new(std::io::ErrorKind::Other, "Partition is empty"));
+                }
+
+                NCCH::new(Reader::new(&self.file, self.header.partition_offset(index), self.header.partition_length(index)))
             },
+        }
+    }
+
+    pub fn partitions(&self) -> PartitionIterator {
+        PartitionIterator {
+            file: Reader::new(&self.file, 0, self.length),
+            header: &self.header,
+            index: 0,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PartitionIterator<'a> {
+    file: Reader<'a>,
+    header: &'a Header,
+    index: usize,
+}
+
+impl<'a> PartitionIterator<'a> {
+    pub fn next(&mut self) -> Result<Option<NCCH>, std::io::Error> {
+        if self.index < 8 {
+            while self.header.partition_offsets[self.index] == 0 {
+                self.index += 1;
+            }
+
+            let partition = NCCH::new(self.file.limit(self.header.partition_offset(self.index), self.header.partition_length(self.index))?).map(Option::Some);
+
+            self.index += 1;
+
+            partition
+        } else {
+            Ok(None)
         }
     }
 }
@@ -87,6 +116,15 @@ pub struct Header {
 }
 
 impl Header {
+    fn partition_offset(&self, index: usize) -> u64 {
+        self.partition_offsets[index] as u64 * 0x200
+    }
+
+    fn partition_length(&self, index: usize) -> u64 {
+        self.partition_lengths[index] as u64 * 0x200
+    }
+
+
     fn read(input: &mut Reader) -> Result<Header, std::io::Error> {
         let mut header = Header::default();
         header.signature.resize(0x100, 0);

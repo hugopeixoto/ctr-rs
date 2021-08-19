@@ -21,6 +21,10 @@ impl<'a> NCCH<'a> {
     pub fn romfs(&self) -> Result<RomFS, std::io::Error> {
         RomFS::new(self.file.limit(self.header.romfs_offset, self.header.romfs_size)?)
     }
+
+    pub fn id(&self) -> u64 {
+        self.header.partition_id
+    }
 }
 
 impl<'a> VirtualFile<'a> for NCCH<'a> {
