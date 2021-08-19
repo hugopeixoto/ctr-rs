@@ -32,6 +32,7 @@ impl<'a> RomFS<'a> {
                 file: self.file.clone(),
                 directory_base_offset: self.lvl3_header.header_offset + self.lvl3_header.directory_metadata_table.offset as u64,
                 file_base_offset: self.lvl3_header.header_offset + self.lvl3_header.file_metadata_table.offset as u64,
+                file_data_offset: self.lvl3_header.header_offset + self.lvl3_header.file_data_offset as u64,
             },
             next_directory: Some(0),
             next_file: None,
@@ -110,6 +111,7 @@ pub struct NodeIteratorContext<'a> {
     file: Reader<'a>,
     directory_base_offset: u64,
     file_base_offset: u64,
+    file_data_offset: u64,
 }
 
 pub struct NodeIterator<'a> {
@@ -302,6 +304,11 @@ impl<'a> FileMetadata<'a> {
     }
 }
 
+impl<'a> super::read::VirtualFile<'a> for FileMetadata<'a> {
+    fn reader(&'a self) -> Reader<'a> {
+        self.context.file.limit(self.context.file_data_offset + self.header.file_data_offset, self.header.file_data_length).unwrap()
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct FileMetadataHeader {

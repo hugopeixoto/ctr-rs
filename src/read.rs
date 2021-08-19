@@ -109,3 +109,26 @@ impl<'a> std::io::Seek for Reader<'a> {
 pub trait VirtualFile<'a> {
     fn reader(&'a self) -> Reader<'a>;
 }
+
+pub struct FileHolder {
+    file: std::sync::RwLock<std::fs::File>,
+    length: u64,
+}
+
+impl FileHolder {
+    pub fn new(mut file: std::fs::File) -> Result<Self, std::io::Error> {
+        let length = file.seek(std::io::SeekFrom::End(0))?;
+
+        Ok(FileHolder { file: file.into(), length })
+    }
+
+    pub fn open(filename: &str) -> Result<Self, std::io::Error> {
+        Self::new(std::fs::File::open(filename)?)
+    }
+}
+
+impl<'a> VirtualFile<'a> for FileHolder {
+    fn reader(&'a self) -> Reader<'a> {
+        Reader::new(&self.file, 0, self.length)
+    }
+}

@@ -10,9 +10,9 @@ fn save_to<R: std::io::Read>(reader: &mut R, filename: &str) -> Result<(), std::
 
 fn main() -> Result<(), std::io::Error> {
     let filename = &std::env::args().collect::<Vec<_>>()[1];
-    let file = std::fs::File::open(filename)?;
+    let file = vgc_data::read::FileHolder::open(filename)?;
 
-    let rom = ncsd::NCSD::new(file)?;
+    let rom = ncsd::NCSD::new(file.reader())?;
 
     let mut it = rom.partitions();
     while let Some(partition) = it.next()? {
@@ -20,22 +20,22 @@ fn main() -> Result<(), std::io::Error> {
         save_to(&mut partition.reader(), &filename)?;
 
         if let Some(mut region) = partition.plain_region()? {
-            let filename = format!("{}.plain2", filename);
+            let filename = format!("{}.plain", filename);
             save_to(&mut region, &filename)?;
         }
 
         if let Some(mut region) = partition.logo()? {
-            let filename = format!("{}.logo2", filename);
+            let filename = format!("{}.logo", filename);
             save_to(&mut region, &filename)?;
         }
 
         if let Some(mut region) = partition.exefs()? {
-            let filename = format!("{}.exefs2", filename);
+            let filename = format!("{}.exefs", filename);
             save_to(&mut region, &filename)?;
         }
 
         if let Some(region) = partition.romfs()? {
-            let filename = format!("{}.romfs2", filename);
+            let filename = format!("{}.romfs", filename);
             save_to(&mut region.reader(), &filename)?;
         }
     }

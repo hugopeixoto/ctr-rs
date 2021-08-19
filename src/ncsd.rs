@@ -1,7 +1,6 @@
 use super::ncch::NCCH;
 use super::read::Reader;
 use std::io::Read;
-use std::io::Seek;
 use byteorder::ReadBytesExt;
 use byteorder::LittleEndian;
 
@@ -14,9 +13,8 @@ fn expect<F>(good: bool, f: F) -> Result<(), std::io::Error> where F: Fn() -> St
 }
 
 #[derive(Debug)]
-pub struct NCSD {
-    file: std::sync::RwLock<std::fs::File>,
-    length: u64,
+pub struct NCSD<'a> {
+    file: Reader<'a>,
     header: Header,
 }
 
@@ -29,13 +27,11 @@ pub enum Partition {
     Index(usize),
 }
 
-impl NCSD {
-    pub fn new(mut source: std::fs::File) -> Result<NCSD, std::io::Error> {
-        let length = source.seek(std::io::SeekFrom::End(0))?;
-        let file = source.into();
-        let header = Header::read(&mut Reader::new(&file, 0, length))?;
+impl<'a> NCSD<'a> {
+    pub fn new(mut file: Reader<'a>) -> Result<NCSD, std::io::Error> {
+        let header = Header::read(&mut file)?;
 
-        Ok(NCSD { file, length, header })
+        Ok(NCSD { file, header })
     }
 
     pub fn partition(&self, p: Partition) -> Result<NCCH, std::io::Error> {
@@ -54,14 +50,14 @@ impl NCSD {
                     return Err(std::io::Error::new(std::io::ErrorKind::Other, "Partition is empty"));
                 }
 
-                NCCH::new(Reader::new(&self.file, self.header.partition_offset(index), self.header.partition_length(index)))
+                NCCH::new(self.file.limit(self.header.partition_offset(index), self.header.partition_length(index))?)
             },
         }
     }
 
     pub fn partitions(&self) -> PartitionIterator {
         PartitionIterator {
-            file: Reader::new(&self.file, 0, self.length),
+            file: self.file.clone(),
             header: &self.header,
             index: 0,
         }
