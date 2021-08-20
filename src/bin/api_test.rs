@@ -21,7 +21,7 @@ fn walkdir(mut entries: romfs::NodeIterator, depth: usize) -> Result<(), std::io
 
 // Test function to ensure that every object's lifetime is not bound to its parent,
 // but to the root reader.
-fn lifetime_guarantee<'a, 'b>(rom: &'b ncsd::NCSD<'a>) -> Result<garc::GARC<'a>, std::io::Error> {
+fn lifetime_guarantee<'a, 'b>(rom: &'b ncsd::NCSD<'a>) -> Result<read::Reader<'a>, std::io::Error> {
     let p0 = rom.partition(ncsd::Partition::Main)?;
     let romfs = p0.romfs()?.unwrap();
     let file = romfs.file_at("a/1/5/2")?;
@@ -32,16 +32,27 @@ fn lifetime_guarantee<'a, 'b>(rom: &'b ncsd::NCSD<'a>) -> Result<garc::GARC<'a>,
         _ => { panic!("Entry is a directory, not a file"); },
     };
 
-    garc::GARC::new(file.reader())
+    let garc = garc::GARC::new(file.reader())?;
+    let table = match garc.file_at(0, 0)? {
+        Some(file) => file,
+        None => { panic!("Couldn't find garc subfile"); },
+    };
+
+    Ok(table.reader())
 }
 
 pub fn main() -> Result<(), std::io::Error> {
     let file = read::FileHolder::open("pokemon-sun.3ds")?;
     let rom = ncsd::NCSD::new(file.reader())?;
 
-    let garc = lifetime_guarantee(&rom)?;
+    let table = lifetime_guarantee(&rom)?;
+    println!("{:?}", table);
 
-    println!("{:?}", garc);
+    let table = pokemon::table::Table::new(table)?;
+
+    for entry in table.entries() {
+        println!("{:?}", entry);
+    }
 
     Ok(())
 }

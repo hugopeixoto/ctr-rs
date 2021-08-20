@@ -24,7 +24,7 @@ impl<'a> GARC<'a> {
         self.header.otaf_file_count
     }
 
-    pub fn entries(&self) -> FileIterator {
+    pub fn entries<'b>(&'b self) -> FileIterator<'a, 'b> {
         FileIterator {
             context: FileIteratorContext {
                 file: self.file.clone(),
@@ -35,6 +35,27 @@ impl<'a> GARC<'a> {
             },
             index: 0,
         }
+    }
+
+    pub fn file_at<'b>(&'b self, i: usize, j: usize) -> Result<Option<SubfileEntry<'a, 'b>>, std::io::Error> {
+        let mut index = 0;
+        let mut it = self.entries();
+        while let Some(entry) = it.next()? {
+            if index == i {
+                let mut subindex = 0;
+                let mut jt = entry.entries();
+                while let Some(subentry) = jt.next()? {
+                    if subindex == j {
+                        return Ok(Some(subentry));
+                    }
+                    subindex += 1;
+                }
+            }
+
+            index += 1;
+        }
+
+        Ok(None)
     }
 }
 
@@ -142,26 +163,26 @@ impl Header {
 }
 
 #[derive(Clone, Debug)]
-pub struct FileIteratorContext<'a> {
+pub struct FileIteratorContext<'a, 'b> {
     file: Reader<'a>,
     file_count: u16,
     base_offset: u64,
     data_offset: u64,
-    fat_offsets: &'a [u32],
+    fat_offsets: &'b [u32],
 }
 
 #[derive(Debug)]
-pub struct FileIterator<'a> {
-    context: FileIteratorContext<'a>,
+pub struct FileIterator<'a, 'b> {
+    context: FileIteratorContext<'a, 'b>,
     index: u16,
 }
 
-impl<'a> FileIterator<'a> {
+impl<'a, 'b> FileIterator<'a, 'b> {
     pub fn file_offset(&self) -> u64 {
         self.context.base_offset + self.context.fat_offsets[self.index as usize] as u64
     }
 
-    pub fn next(&mut self) -> Result<Option<FileEntry>, std::io::Error> {
+    pub fn next(&mut self) -> Result<Option<FileEntry<'a, 'b>>, std::io::Error> {
         if self.index < self.context.file_count {
             self.context.file.seek(SeekFrom::Start(self.file_offset()))?;
             self.index += 1;
@@ -180,14 +201,14 @@ impl<'a> FileIterator<'a> {
 }
 
 #[derive(Debug)]
-pub struct FileEntry<'a> {
-    context: FileIteratorContext<'a>,
+pub struct FileEntry<'a, 'b> {
+    context: FileIteratorContext<'a, 'b>,
     index: u16,
     header: FileEntryHeader,
 }
 
-impl<'a> FileEntry<'a> {
-    pub fn entries(&self) -> SubfileIterator {
+impl<'a, 'b> FileEntry<'a, 'b> {
+    pub fn entries(&self) -> SubfileIterator<'a, 'b> {
         SubfileIterator {
             context: self.context.clone(),
             index: 0,
@@ -202,15 +223,15 @@ impl<'a> FileEntry<'a> {
 }
 
 #[derive(Debug)]
-pub struct SubfileIterator<'a> {
-    context: FileIteratorContext<'a>,
+pub struct SubfileIterator<'a, 'b> {
+    context: FileIteratorContext<'a, 'b>,
     vector: u32,
     index: u8,
     offset: u64,
 }
 
-impl<'a> SubfileIterator<'a> {
-    pub fn next(&mut self) -> Result<Option<SubfileEntry>, std::io::Error> {
+impl<'a, 'b> SubfileIterator<'a, 'b> {
+    pub fn next(&mut self) -> Result<Option<SubfileEntry<'a, 'b>>, std::io::Error> {
         if self.vector >> self.index == 0 {
             Ok(None)
         } else {
@@ -249,19 +270,19 @@ impl FileEntryHeader {
 }
 
 #[derive(Debug)]
-pub struct SubfileEntry<'a> {
-    context: FileIteratorContext<'a>,
+pub struct SubfileEntry<'a, 'b> {
+    context: FileIteratorContext<'a, 'b>,
     header: SubfileEntryHeader,
     index: u8,
 }
 
-impl<'a> SubfileEntry<'a> {
+impl<'a, 'b> SubfileEntry<'a, 'b> {
     pub fn index(&self) -> u8 {
         self.index
     }
 }
 
-impl<'a> VirtualFile<'a> for SubfileEntry<'a> {
+impl<'a, 'b> VirtualFile<'a> for SubfileEntry<'a, 'b> {
     fn reader(&self) -> Reader<'a> {
         self.context.file.limit(
             self.context.data_offset + self.header.start as u64,
