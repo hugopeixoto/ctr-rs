@@ -12,7 +12,7 @@ pub struct Reader<'a> {
 }
 
 impl<'a> Reader<'a> {
-    pub fn new(file: &'a std::sync::RwLock<std::fs::File>, offset: u64, length: u64) -> Reader {
+    pub fn new(file: &'a std::sync::RwLock<std::fs::File>, offset: u64, length: u64) -> Reader<'a> {
         Reader {
             file,
             offset,
@@ -21,7 +21,7 @@ impl<'a> Reader<'a> {
         }
     }
 
-    pub fn limit(&self, offset: u64, length: u64) -> Result<Reader, Error> {
+    pub fn limit(&self, offset: u64, length: u64) -> Result<Reader<'a>, Error> {
         if offset + length <= self.length {
             Ok(Reader {
                 file: self.file,
@@ -111,7 +111,7 @@ impl<'a> std::io::Seek for Reader<'a> {
 }
 
 pub trait VirtualFile<'a> {
-    fn reader(&'a self) -> Reader<'a>;
+    fn reader(&self) -> Reader<'a>;
 }
 
 pub struct FileHolder {
@@ -129,10 +129,8 @@ impl FileHolder {
     pub fn open(filename: &str) -> Result<Self, std::io::Error> {
         Self::new(std::fs::File::open(filename)?)
     }
-}
 
-impl<'a> VirtualFile<'a> for FileHolder {
-    fn reader(&'a self) -> Reader<'a> {
+    pub fn reader<'a>(&'a self) -> Reader<'a> {
         Reader::new(&self.file, 0, self.length)
     }
 }

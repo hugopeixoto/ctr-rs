@@ -34,7 +34,7 @@ impl<'a> NCSD<'a> {
         Ok(NCSD { file, header })
     }
 
-    pub fn partition(&self, p: Partition) -> Result<NCCH, std::io::Error> {
+    pub fn partition(&self, p: Partition) -> Result<NCCH<'a>, std::io::Error> {
         match p {
             Partition::Main => self.partition(Partition::Index(0)),
             Partition::Manual => self.partition(Partition::Index(1)),

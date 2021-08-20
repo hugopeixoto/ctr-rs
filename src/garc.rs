@@ -262,7 +262,7 @@ impl<'a> SubfileEntry<'a> {
 }
 
 impl<'a> VirtualFile<'a> for SubfileEntry<'a> {
-    fn reader(&'a self) -> Reader<'a> {
+    fn reader(&self) -> Reader<'a> {
         self.context.file.limit(
             self.context.data_offset + self.header.start as u64,
             self.header.length as u64,

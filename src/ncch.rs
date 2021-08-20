@@ -18,7 +18,7 @@ impl<'a> NCCH<'a> {
         Ok(NCCH { file, header })
     }
 
-    pub fn romfs(&self) -> Result<Option<RomFS>, std::io::Error> {
+    pub fn romfs(&self) -> Result<Option<RomFS<'a>>, std::io::Error> {
         let rom = RomFS::new(self.file.limit(self.header.romfs_offset, self.header.romfs_size)?)?;
 
         Ok(Some(rom))

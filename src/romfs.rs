@@ -26,7 +26,7 @@ impl<'a> RomFS<'a> {
         Ok(RomFS { file, header, lvl3_header })
     }
 
-    pub fn entries(&self) -> NodeIterator {
+    pub fn entries(&self) -> NodeIterator<'a> {
         NodeIterator {
             context: NodeIteratorContext {
                 file: self.file.clone(),
@@ -37,6 +37,33 @@ impl<'a> RomFS<'a> {
             next_directory: Some(0),
             next_file: None,
         }
+    }
+
+    pub fn file_at(&self, path: &str) -> Result<Option<Node<'a>>, std::io::Error> {
+        let mut context = self.entries().next()?.ok_or(std::io::Error::new(std::io::ErrorKind::Other, "Couldn't find root directory"))?;
+
+        for component in path.split("/") {
+            let directory = match context {
+                Node::Directory(dir) => dir,
+                Node::File(_) => { return Ok(None); },
+            };
+
+            let mut found = None;
+            let mut it = directory.entries();
+            while let Some(entry) = it.next()? {
+                if entry.basename() == component {
+                    found = Some(entry);
+                    break;
+                }
+            }
+
+            match found {
+                None => { return Ok(None) },
+                Some(entry) => { context = entry; },
+            }
+        }
+
+        Ok(Some(context))
     }
 }
 
@@ -100,10 +127,19 @@ impl Header {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Node<'a> {
     File(FileMetadata<'a>),
     Directory(DirectoryMetadata<'a>),
+}
+
+impl<'a> Node<'a> {
+    pub fn basename(&self) -> &String {
+        match self {
+            Self::File(f) => f.basename(),
+            Self::Directory(d) => d.basename(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -129,7 +165,7 @@ impl<'a> NodeIterator<'a> {
         self.next_file.map(|offset| self.context.file_base_offset + offset as u64)
     }
 
-    pub fn next(&mut self) -> Result<Option<Node>, std::io::Error> {
+    pub fn next(&mut self) -> Result<Option<Node<'a>>, std::io::Error> {
         match self.directory_offset() {
             Some(offset) => {
                 match Self::read_directory(&self.context, offset) {
@@ -219,7 +255,7 @@ fn align(offset: u64, block_size: u64) -> u64 {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DirectoryMetadata<'a> {
     context: NodeIteratorContext<'a>,
     header: DirectoryMetadataHeader,
@@ -230,7 +266,7 @@ impl<'a> DirectoryMetadata<'a> {
         &self.header.basename
     }
 
-    pub fn entries(&self) -> NodeIterator {
+    pub fn entries(&self) -> NodeIterator<'a> {
         NodeIterator {
             context: self.context.clone(),
             next_directory: self.header.first_subdirectory,
@@ -240,7 +276,7 @@ impl<'a> DirectoryMetadata<'a> {
 }
 
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct DirectoryMetadataHeader {
     parent: u32,
     next_directory: Option<u32>,
@@ -292,7 +328,7 @@ pub fn read_le16_string(input: &[u8]) -> Result<String, std::io::Error> {
     Ok(s)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileMetadata<'a> {
     context: NodeIteratorContext<'a>,
     header: FileMetadataHeader,
@@ -305,12 +341,12 @@ impl<'a> FileMetadata<'a> {
 }
 
 impl<'a> super::read::VirtualFile<'a> for FileMetadata<'a> {
-    fn reader(&'a self) -> Reader<'a> {
+    fn reader(&self) -> Reader<'a> {
         self.context.file.limit(self.context.file_data_offset + self.header.file_data_offset, self.header.file_data_length).unwrap()
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct FileMetadataHeader {
     parent: u32,
     next_file: Option<u32>,
