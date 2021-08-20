@@ -42,6 +42,10 @@ impl<'a> Reader<'a> {
             position: 0,
         }
     }
+
+    pub fn length(&self) -> u64 {
+        self.length
+    }
 }
 
 impl<'a> std::io::Read for Reader<'a> {
