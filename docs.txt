@@ -1,0 +1,55 @@
+a/0/1/7.{species_id}.00:
+  "personal information" for each species.
+  Entries bigger than the pokedex number are for alternate forms.
+
+a/0/3/2.055.00:
+- text file
+- species name, by national pokedex number. entries above that are
+  for alternate forms, indexed by something.
+
+a/0/3/2.120.00:
+- text file
+- dex entries
+
+a/0/3/2.121.00:
+- text file
+- alt dex entries
+
+sun 1/5/2.0.00:
+- table file (BL)
+- 11 tables:
+  - [u16le]: pokedex numbers ordered by national pokedex order
+  - [u16le]: pokedex numbers ordered by alolan pokedex order
+  - [u16le]: pokedex numbers ordered by melemele pokedex order
+  - [u16le]: pokedex numbers ordered by akala pokedex order
+  - [u16le]: pokedex numbers ordered by ula'ula pokedex order
+  - [u16le]: pokedex numbers ordered by poni pokedex order
+  - [u16le]: pokedex numbers ordered by descending height
+  - [u16le]: pokedex numbers ordered by ascending height
+  - [u16le]: pokedex numbers ordered by descending weight
+  - [u16le]: pokedex numbers ordered by descending weight
+  - [{[u16le; 9], u16le}]: evolution chains, indexed by pokedex number
+
+sun 1/5/2.1.00:
+- table file (BL)
+- 7 tables:
+  - [u16le]: next form number in species, indexed by form number
+  - [u8]: pokemon shape
+
+table-file:
+- [u8;2]:               424c (BL)
+- u16le:                table-count
+- [u32le; table-count]: table-offsets
+- u32le:                end-of-last-table
+- $:                    tables content
+
+Magic numbers:
+- NCSD
+- NCCH
+- IVFC
+- DARC
+- GARC
+- FATO
+- FATB
+- FIMB
+- BL
