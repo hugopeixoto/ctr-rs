@@ -37,7 +37,7 @@ impl<'a> GARC<'a> {
         }
     }
 
-    pub fn file_at<'b>(&'b self, i: usize, j: usize) -> Result<Option<SubfileEntry<'a, 'b>>, std::io::Error> {
+    pub fn file_at(&self, i: usize, j: usize) -> Result<Option<SubfileEntry<'a>>, std::io::Error> {
         let mut index = 0;
         let mut it = self.entries();
         while let Some(entry) = it.next()? {
@@ -231,7 +231,7 @@ pub struct SubfileIterator<'a, 'b> {
 }
 
 impl<'a, 'b> SubfileIterator<'a, 'b> {
-    pub fn next(&mut self) -> Result<Option<SubfileEntry<'a, 'b>>, std::io::Error> {
+    pub fn next(&mut self) -> Result<Option<SubfileEntry<'a>>, std::io::Error> {
         if self.vector >> self.index == 0 {
             Ok(None)
         } else {
@@ -246,7 +246,10 @@ impl<'a, 'b> SubfileIterator<'a, 'b> {
              self.offset = self.context.file.stream_position()?;
 
              Ok(Some(SubfileEntry {
-                 context: self.context.clone(),
+                 context: SubfileEntryContext {
+                     file: self.context.file.clone(),
+                     data_offset: self.context.data_offset,
+                 },
                  header,
                  index: self.index - 1,
              }))
@@ -270,19 +273,25 @@ impl FileEntryHeader {
 }
 
 #[derive(Debug)]
-pub struct SubfileEntry<'a, 'b> {
-    context: FileIteratorContext<'a, 'b>,
+struct SubfileEntryContext<'a> {
+    file: Reader<'a>,
+    data_offset: u64,
+}
+
+#[derive(Debug)]
+pub struct SubfileEntry<'a> {
+    context: SubfileEntryContext<'a>,
     header: SubfileEntryHeader,
     index: u8,
 }
 
-impl<'a, 'b> SubfileEntry<'a, 'b> {
+impl<'a> SubfileEntry<'a> {
     pub fn index(&self) -> u8 {
         self.index
     }
 }
 
-impl<'a, 'b> VirtualFile<'a> for SubfileEntry<'a, 'b> {
+impl<'a> VirtualFile<'a> for SubfileEntry<'a> {
     fn reader(&self) -> Reader<'a> {
         self.context.file.limit(
             self.context.data_offset + self.header.start as u64,

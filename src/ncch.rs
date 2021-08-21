@@ -28,6 +28,10 @@ impl<'a> NCCH<'a> {
         self.header.partition_id
     }
 
+    pub fn product_code(&self) -> Result<String, std::str::Utf8Error> {
+        std::str::from_utf8(&self.header.product_code).map(|s| s.trim_end_matches('\x00').into())
+    }
+
     // plain region not yet implemented
     pub fn plain_region(&'a self) -> Result<Option<Reader<'a>>, std::io::Error> {
         if self.header.plain_region_offset == 0 {
