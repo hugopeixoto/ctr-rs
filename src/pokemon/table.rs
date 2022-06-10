@@ -19,6 +19,10 @@ impl<'a> Table<'a> {
         self.header.table_count
     }
 
+    pub fn len(&self) -> u16 {
+        self.table_count()
+    }
+
     pub fn entries<'b>(&'b self) -> TableIterator<'a, 'b> {
         TableIterator {
             table: &self,
@@ -61,7 +65,9 @@ impl Header {
         let mut header = Header::default();
 
         header.magic = input.read_u16::<LittleEndian>()?;
-        assert!(header.magic == 0x4c42);
+        if !(header.magic == 0x4c42) {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "expected BL magic number"));
+        }
 
         header.table_count = input.read_u16::<LittleEndian>()?;
         assert!(4 + (header.table_count as u64 + 1) * 4 <= input.length());
@@ -71,7 +77,9 @@ impl Header {
 
             assert!((offset as u64) <= input.length());
             if i > 0 {
-                assert!(header.table_offsets[i - 1] < offset);
+                if !(header.table_offsets[i - 1] < offset) {
+                    return Err(std::io::Error::new(std::io::ErrorKind::Other, "dunno, don't remember anything"));
+                }
             }
 
             header.table_offsets.push(offset);

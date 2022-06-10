@@ -2,39 +2,52 @@ a/0/1/7.{species_id}.00:
   "personal information" for each species.
   Entries bigger than the pokedex number are for alternate forms.
 
-a/0/3/2.055.00:
+a/0/3/{language}.055.00:
 - text file
 - species name, by national pokedex number. entries above that are
   for alternate forms, indexed by something.
 
-a/0/3/2.120.00:
+a/0/3/{language}.114.00:
 - text file
-- dex entries
+- form names, by national pokedex number. entries above that are
+  for alternate forms. indexed by something.
 
-a/0/3/2.121.00:
+a/0/3/{language}.120.00:
 - text file
-- alt dex entries
+- dex entries, by national pokedex number. entries above that are
+  for alternate forms. indexed by something.
+
+a/0/3/{language}.121.00:
+- text file
+- alternate dex entries, by national pokedex number. entries above that are
+  for alternate forms. indexed by something.
 
 sun 1/5/2.0.00:
 - table file (BL)
 - 11 tables:
-  - [u16le]: pokedex numbers ordered by national pokedex order
-  - [u16le]: pokedex numbers ordered by alolan pokedex order
-  - [u16le]: pokedex numbers ordered by melemele pokedex order
-  - [u16le]: pokedex numbers ordered by akala pokedex order
-  - [u16le]: pokedex numbers ordered by ula'ula pokedex order
-  - [u16le]: pokedex numbers ordered by poni pokedex order
-  - [u16le]: pokedex numbers ordered by descending height
-  - [u16le]: pokedex numbers ordered by ascending height
-  - [u16le]: pokedex numbers ordered by descending weight
-  - [u16le]: pokedex numbers ordered by descending weight
-  - [{[u16le; 9], u16le}]: evolution chains, indexed by pokedex number
+  - [u16le]: species ids ordered by national pokedex order
+  - [u16le]: species ids ordered by alolan pokedex order
+  - [u16le]: species ids ordered by melemele pokedex order
+  - [u16le]: species ids ordered by akala pokedex order
+  - [u16le]: species ids ordered by ula'ula pokedex order
+  - [u16le]: species ids ordered by poni pokedex order
+  - [u16le]: species ids ordered by descending height
+  - [u16le]: species ids ordered by ascending height
+  - [u16le]: species ids ordered by descending weight
+  - [u16le]: species ids ordered by descending weight
+  - [{[u16le; 9], u16le}]: evolution chains, indexed by species id
 
 sun 1/5/2.1.00:
 - table file (BL)
 - 7 tables:
-  - [u16le]: next form number in species, indexed by form number
-  - [u8]: pokemon shape
+  - [u16le]: pokemon form id -> next form id for that species. A linked list of sorts. The last form will have next=0. You start at idx=species-id.
+  - [u8]: pokemon form id -> shape
+  - [u8]: species id -> regional dex number, zero for missing entries
+  - [u8]: species id -> melemele dex number, zero for missing entries
+  - [u8]: species id -> akala dex number, zero for missing entries
+  - [u8]: species id -> ula'ula dex number, zero for missing entries
+  - [u8]: species id -> poni dex number, zero for missing entries
+
 
 table-file:
 - [u8;2]:               424c (BL)

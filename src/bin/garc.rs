@@ -18,9 +18,9 @@ fn main() -> Result<(), std::io::Error> {
     println!("file size: {:#?}", garc.reader().length());
 
     let mut it = garc.entries();
-    while let Some(entry) = it.next()? {
+    while let Some(entry) = it.try_next()? {
         let mut jt = entry.entries();
-        while let Some(subentry) = jt.next()? {
+        while let Some(subentry) = jt.try_next()? {
             let filename = format!("{}.{:0width$}.{02}", filename, entry.index(), subentry.index(), width = width);
 
             save_to(&mut subentry.reader(), &filename)?;

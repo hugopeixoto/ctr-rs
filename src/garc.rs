@@ -40,11 +40,11 @@ impl<'a> GARC<'a> {
     pub fn file_at(&self, i: usize, j: usize) -> Result<Option<SubfileEntry<'a>>, std::io::Error> {
         let mut index = 0;
         let mut it = self.entries();
-        while let Some(entry) = it.next()? {
+        while let Some(entry) = it.try_next()? {
             if index == i {
                 let mut subindex = 0;
                 let mut jt = entry.entries();
-                while let Some(subentry) = jt.next()? {
+                while let Some(subentry) = jt.try_next()? {
                     if subindex == j {
                         return Ok(Some(subentry));
                     }
@@ -107,7 +107,10 @@ impl Header {
         header.endianess     = input.read_u16::<LittleEndian>()?;
 
         header.version   = input.read_u16::<LittleEndian>()?;
-        assert!(header.version == 0x400 || header.version == 0x600);
+
+        if !(header.version == 0x400 || header.version == 0x600) {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "wrong GARC version"));
+        }
 
         header.file_size = input.read_u32::<LittleEndian>()?;
 
@@ -143,7 +146,9 @@ impl Header {
         header.btaf_file_count = input.read_u32::<LittleEndian>()?;
         header.btaf_offset = input.stream_position()?;
 
-        assert!(header.btaf_section_size - 12 == header.btaf_file_count as u32 * 16);
+        if !(header.btaf_section_size - 12 == header.btaf_file_count as u32 * 16) {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "btaf derp"));
+        }
         buf.resize(header.btaf_section_size as usize - 12, 0);
         input.read_exact(&mut buf)?;
 
@@ -177,12 +182,20 @@ pub struct FileIterator<'a, 'b> {
     index: u16,
 }
 
+impl<'a, 'b> Iterator for FileIterator<'a, 'b> {
+    type Item = Result<FileEntry<'a, 'b>, std::io::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.try_next().transpose()
+    }
+}
+
 impl<'a, 'b> FileIterator<'a, 'b> {
     pub fn file_offset(&self) -> u64 {
         self.context.base_offset + self.context.fat_offsets[self.index as usize] as u64
     }
 
-    pub fn next(&mut self) -> Result<Option<FileEntry<'a, 'b>>, std::io::Error> {
+    pub fn try_next(&mut self) -> Result<Option<FileEntry<'a, 'b>>, std::io::Error> {
         if self.index < self.context.file_count {
             self.context.file.seek(SeekFrom::Start(self.file_offset()))?;
             self.index += 1;
@@ -231,7 +244,7 @@ pub struct SubfileIterator<'a, 'b> {
 }
 
 impl<'a, 'b> SubfileIterator<'a, 'b> {
-    pub fn next(&mut self) -> Result<Option<SubfileEntry<'a>>, std::io::Error> {
+    pub fn try_next(&mut self) -> Result<Option<SubfileEntry<'a>>, std::io::Error> {
         if self.vector >> self.index == 0 {
             Ok(None)
         } else {
@@ -239,20 +252,20 @@ impl<'a, 'b> SubfileIterator<'a, 'b> {
                 self.index += 1;
             }
 
-             self.context.file.seek(SeekFrom::Start(self.offset))?;
-             let header = SubfileEntryHeader::read(&mut self.context.file)?;
+            self.context.file.seek(SeekFrom::Start(self.offset))?;
+            let header = SubfileEntryHeader::read(&mut self.context.file)?;
 
-             self.index += 1;
-             self.offset = self.context.file.stream_position()?;
+            self.index += 1;
+            self.offset = self.context.file.stream_position()?;
 
-             Ok(Some(SubfileEntry {
-                 context: SubfileEntryContext {
-                     file: self.context.file.clone(),
-                     data_offset: self.context.data_offset,
-                 },
-                 header,
-                 index: self.index - 1,
-             }))
+            Ok(Some(SubfileEntry {
+                context: SubfileEntryContext {
+                    file: self.context.file.clone(),
+                    data_offset: self.context.data_offset,
+                },
+                header,
+                index: self.index - 1,
+            }))
         }
     }
 }

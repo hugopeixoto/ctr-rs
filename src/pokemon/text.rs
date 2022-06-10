@@ -34,8 +34,15 @@ pub struct TextIterator<'a, 'b> {
     index: u16,
 }
 
+impl<'a, 'b> Iterator for TextIterator<'a, 'b> {
+    type Item = Result<String, std::io::Error>;
+    fn next(&mut self) -> Option<Result<String, std::io::Error>> {
+        self.try_next().transpose()
+    }
+}
+
 impl<'a, 'b> TextIterator<'a, 'b> {
-    pub fn next(&mut self) -> Result<Option<String>, std::io::Error> {
+    fn try_next(&mut self) -> Result<Option<String>, std::io::Error> {
         if self.index < self.header.line_count {
             self.file.seek(SeekFrom::Start(20 + self.index as u64 * 8))?;
             let entry = LineEntry::read(&mut self.file)?;
